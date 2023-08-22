@@ -6,14 +6,7 @@ const {
     removeContact,
     addContact,
     updateContact,
-} = require('../../models/contacts') // Import funkcji obsługujących operacje na kontaktach
-const Joi = require('joi')
-
-const contactSchema = Joi.object({
-    name: Joi.string().required(),
-    email: Joi.string().email().required(),
-    phone: Joi.string().required(),
-})
+} = require('../../models/contacts')
 
 router.get('/', async (req, res, next) => {
     try {
@@ -27,11 +20,7 @@ router.get('/', async (req, res, next) => {
 router.get('/:contactId', async (req, res, next) => {
     const { contactId } = req.params
     try {
-        const contact = await getContactById(contactId)
-        if (!contact) {
-            res.status(404).json({ message: 'Not found' })
-            return
-        }
+        const contact = await getContactById(Number(contactId))
         res.json(contact)
     } catch (error) {
         next(error)
@@ -39,11 +28,6 @@ router.get('/:contactId', async (req, res, next) => {
 })
 
 router.post('/', async (req, res, next) => {
-    const { error } = contactSchema.validate(req.body)
-    if (error) {
-        res.status(400).json({ message: error.details[0].message })
-        return
-    }
     try {
         const newContact = await addContact(req.body)
         res.status(201).json(newContact)
@@ -55,11 +39,7 @@ router.post('/', async (req, res, next) => {
 router.delete('/:contactId', async (req, res, next) => {
     const { contactId } = req.params
     try {
-        const result = await removeContact(contactId)
-        if (!result) {
-            res.status(404).json({ message: 'Not found' })
-            return
-        }
+        await removeContact(Number(contactId))
         res.json({ message: 'Contact deleted' })
     } catch (error) {
         next(error)
@@ -68,17 +48,8 @@ router.delete('/:contactId', async (req, res, next) => {
 
 router.put('/:contactId', async (req, res, next) => {
     const { contactId } = req.params
-    const { error } = contactSchema.validate(req.body)
-    if (error) {
-        res.status(400).json({ message: error.details[0].message })
-        return
-    }
     try {
-        const updatedContact = await updateContact(contactId, req.body)
-        if (!updatedContact) {
-            res.status(404).json({ message: 'Not found' })
-            return
-        }
+        const updatedContact = await updateContact(Number(contactId), req.body)
         res.json(updatedContact)
     } catch (error) {
         next(error)
