@@ -1,5 +1,6 @@
 const fs = require('fs/promises')
 const path = require('path')
+const Joi = require('joi')
 
 const contactsPath = path.join(__dirname, '..', 'db', 'contacts.json')
 
@@ -23,7 +24,18 @@ const removeContact = async (contactId) => {
     await fs.writeFile(contactsPath, JSON.stringify(updatedContacts))
 }
 
+const contactSchema = Joi.object({
+    name: Joi.string().required(),
+    email: Joi.string().email().required(),
+    phone: Joi.string().required(),
+})
+
 const addContact = async (body) => {
+    const { error } = contactSchema.validate(body)
+    if (error) {
+        throw new Error(`Validation error: ${error.details[0].message}`)
+    }
+
     const contacts = await listContacts()
     const newContact = { id: Date.now(), ...body }
     contacts.push(newContact)
@@ -32,6 +44,11 @@ const addContact = async (body) => {
 }
 
 const updateContact = async (contactId, body) => {
+    const { error } = contactSchema.validate(body)
+    if (error) {
+        throw new Error(`Validation error: ${error.details[0].message}`)
+    }
+
     const contacts = await listContacts()
     const updatedContacts = contacts.map((c) =>
         c.id === contactId ? { ...c, ...body } : c

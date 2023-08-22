@@ -32,7 +32,11 @@ router.post('/', async (req, res, next) => {
         const newContact = await addContact(req.body)
         res.status(201).json(newContact)
     } catch (error) {
-        next(error)
+        if (error.message.includes('Validation error')) {
+            res.status(400).json({ message: error.message })
+        } else {
+            next(error)
+        }
     }
 })
 
@@ -52,7 +56,11 @@ router.put('/:contactId', async (req, res, next) => {
         const updatedContact = await updateContact(Number(contactId), req.body)
         res.json(updatedContact)
     } catch (error) {
-        next(error)
+        if (error.message.includes('Validation error')) {
+            res.status(400).json({ message: error.message })
+        } else {
+            next(error)
+        }
     }
 })
 
