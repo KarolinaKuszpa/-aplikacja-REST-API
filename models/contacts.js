@@ -2,16 +2,16 @@ const fs = require('fs/promises')
 const path = require('path')
 const Joi = require('joi')
 
-const contactsPath = path.join(__dirname, '..', 'db', 'contacts.json')
-
-const listContacts = async () => {
-    const data = await fs.readFile(contactsPath, 'utf-8')
+// const contactsFilePath = path.join(__dirname, '..', 'db', 'contacts.json')
+const contactsFilePath = path.join(__dirname, 'contacts.json')
+const getContactsList = async () => {
+    const data = await fs.readFile(contactsFilePath, 'utf-8')
     return JSON.parse(data)
 }
 
 const getContactById = async (contactId) => {
-    const contacts = await listContacts()
-    const contact = contacts.find((c) => c.id === contactId)
+    const contacts = await getContactsList()
+    const contact = contacts.find((contact) => contact.id === contactId)
     if (!contact) {
         throw new Error('Contact not found')
     }
@@ -19,9 +19,11 @@ const getContactById = async (contactId) => {
 }
 
 const removeContact = async (contactId) => {
-    const contacts = await listContacts()
-    const updatedContacts = contacts.filter((c) => c.id !== contactId)
-    await fs.writeFile(contactsPath, JSON.stringify(updatedContacts))
+    const contacts = await getContactsList()
+    const updatedContacts = contacts.filter(
+        (contact) => contact.id !== contactId
+    )
+    await fs.writeFile(contactsFilePath, JSON.stringify(updatedContacts))
 }
 
 const contactSchema = Joi.object({
@@ -30,35 +32,37 @@ const contactSchema = Joi.object({
     phone: Joi.string().required(),
 })
 
-const addContact = async (body) => {
-    const { error } = contactSchema.validate(body)
+const addContact = async (newContactData) => {
+    const { error } = contactSchema.validate(newContactData)
     if (error) {
         throw new Error(`Validation error: ${error.details[0].message}`)
     }
 
-    const contacts = await listContacts()
-    const newContact = { id: Date.now(), ...body }
+    const contacts = await getContactsList()
+    const newContact = { id: Date.now(), ...newContactData }
     contacts.push(newContact)
-    await fs.writeFile(contactsPath, JSON.stringify(contacts))
+    await fs.writeFile(contactsFilePath, JSON.stringify(contacts))
     return newContact
 }
 
-const updateContact = async (contactId, body) => {
-    const { error } = contactSchema.validate(body)
+const updateContact = async (contactId, updatedContactData) => {
+    const { error } = contactSchema.validate(updatedContactData)
     if (error) {
         throw new Error(`Validation error: ${error.details[0].message}`)
     }
 
-    const contacts = await listContacts()
-    const updatedContacts = contacts.map((c) =>
-        c.id === contactId ? { ...c, ...body } : c
+    const contacts = await getContactsList()
+    const updatedContacts = contacts.map((contact) =>
+        contact.id === contactId
+            ? { ...contact, ...updatedContactData }
+            : contact
     )
-    await fs.writeFile(contactsPath, JSON.stringify(updatedContacts))
+    await fs.writeFile(contactsFilePath, JSON.stringify(updatedContacts))
     return getContactById(contactId)
 }
 
 module.exports = {
-    listContacts,
+    getContactsList,
     getContactById,
     removeContact,
     addContact,
