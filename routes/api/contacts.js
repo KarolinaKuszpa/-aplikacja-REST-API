@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const {
-    listContacts,
+    getContactsList,
     getContactById,
     removeContact,
     addContact,
@@ -10,7 +10,7 @@ const {
 
 router.get('/', async (req, res, next) => {
     try {
-        const contacts = await listContacts()
+        const contacts = await getContactsList()
         res.json(contacts)
     } catch (error) {
         next(error)
