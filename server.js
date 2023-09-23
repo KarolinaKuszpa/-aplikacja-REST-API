@@ -11,8 +11,6 @@ const startServer = async () => {
             useUnifiedTopology: true,
         })
         console.log('Database connection successful')
-
-        // Usunięto app.listen stąd, ponieważ jest już w app.js
     } catch (error) {
         console.error('Cannot connect to Mongo Database')
         console.error(error)

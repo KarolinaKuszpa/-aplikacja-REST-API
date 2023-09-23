@@ -2,18 +2,20 @@ const express = require('express')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const Joi = require('joi')
-const gravatar = require('gravatar') // Dodane dla obsługi Gravatara
 const User = require('../../models/models/users')
 const auth = require('../../auth')
 const multer = require('multer')
 const path = require('path')
 const Jimp = require('jimp')
 const fs = require('fs').promises
+const { v4: uuidv4 } = require('uuid')
+const { sendVerificationEmail } = require('../../Nodemailer/mailer')
+
 const router = express.Router()
 
 const upload = multer({
     dest: 'tmp',
-    limits: { fileSize: 2 * 1024 * 1024 }, // max 2 MB
+    limits: { fileSize: 2 * 1024 * 1024 },
 })
 
 const schema = Joi.object({
@@ -30,28 +32,27 @@ router.post('/signup', async (req, res, next) => {
     }
 
     const { email, password } = req.body
-
-    // Generowanie URL Gravatara
-    const avatarURL = gravatar.url(
-        email,
-        { s: '100', r: 'x', d: 'retro' },
-        true
-    )
-
     const existingUser = await User.findOne({ email })
     if (existingUser) {
         return res.status(400).json({ message: 'Email already exists' })
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10)
+    // Generowanie verificationToken
+    const verificationToken = uuidv4()
 
-    // Zapisywanie użytkownika z awatarem
-    const newUser = new User({ email, password: hashedPassword, avatarURL })
+    const hashedPassword = await bcrypt.hash(password, 10)
+    const newUser = new User({
+        email,
+        password: hashedPassword,
+        verificationToken,
+    })
+
+    // Wysyłanie emaila weryfikacyjnego
+    sendVerificationEmail(email, verificationToken)
 
     await newUser.save()
-
     res.status(201).json({
-        user: { email, subscription: 'starter', avatarURL },
+        user: { email, subscription: 'starter' },
     })
 })
 
@@ -155,5 +156,30 @@ router.patch(
         }
     }
 )
+router.get('/verify/:verificationToken', async (req, res, next) => {
+    try {
+        const user = await User.findOne({
+            verificationToken: req.params.verificationToken,
+        })
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' })
+        }
+
+        if (user.verify) {
+            return res
+                .status(400)
+                .json({ message: 'Email has already been verified' })
+        }
+
+        await User.findByIdAndUpdate(user._id, {
+            verify: true,
+            verificationToken: null,
+        })
+        res.status(200).json({ message: 'Verification successful' })
+    } catch (error) {
+        next(error)
+    }
+})
 
 module.exports = router
