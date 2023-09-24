@@ -27,8 +27,7 @@ app.use((err, req, res, next) => {
     res.status(err.status || 500).json({ message: err.message })
 })
 
-const port = 3002 // Dodane
-
+const port = 3002
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`)
 })

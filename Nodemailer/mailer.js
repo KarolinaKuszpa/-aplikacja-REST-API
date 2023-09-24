@@ -12,14 +12,14 @@ const transporter = nodemailer.createTransport({
 })
 
 const sendVerificationEmail = (email, verificationToken) => {
-    const verificationLink = `http://localhost:3002/users/verify/${verificationToken}` // Używaj 3002 jeśli to jest poprawny port serwera
+    const verificationLink = `http://localhost:3002/api/users/verify/${verificationToken}` // Używaj 3002 jeśli to jest poprawny port serwera
     const mailOptions = {
         from: process.env.EMAIL_LOGIN,
         to: email,
         subject: 'Weryfikacja adresu email',
         text: `Kliknij w poniższy link, aby zweryfikować swój adres email: ${verificationLink}`,
     }
-
+    console.log(verificationLink)
     transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
             console.error('Error sending email', error)

@@ -24,36 +24,40 @@ const schema = Joi.object({
 })
 
 router.post('/signup', async (req, res, next) => {
-    const validationResult = schema.validate(req.body)
-    if (validationResult.error) {
-        return res
-            .status(400)
-            .json({ message: validationResult.error.details[0].message })
+    try {
+        const validationResult = schema.validate(req.body)
+        if (validationResult.error) {
+            return res
+                .status(400)
+                .json({ message: validationResult.error.details[0].message })
+        }
+
+        const { email, password } = req.body
+        const existingUser = await User.findOne({ email })
+        if (existingUser) {
+            return res.status(400).json({ message: 'Email already exists' })
+        }
+
+        // Generowanie verificationToken
+        const verificationToken = uuidv4()
+        const hashedPassword = await bcrypt.hash(password, 10)
+        const newUser = new User({
+            email,
+            password: hashedPassword,
+            verificationToken,
+        })
+
+        // Wysyłanie emaila weryfikacyjnego
+        sendVerificationEmail(email, verificationToken)
+        await newUser.save()
+
+        res.status(201).json({
+            user: { email, subscription: 'starter' },
+        })
+    } catch (error) {
+        console.error('Error during signup:', error)
+        res.status(500).json({ message: 'Internal server error' })
     }
-
-    const { email, password } = req.body
-    const existingUser = await User.findOne({ email })
-    if (existingUser) {
-        return res.status(400).json({ message: 'Email already exists' })
-    }
-
-    // Generowanie verificationToken
-    const verificationToken = uuidv4()
-
-    const hashedPassword = await bcrypt.hash(password, 10)
-    const newUser = new User({
-        email,
-        password: hashedPassword,
-        verificationToken,
-    })
-
-    // Wysyłanie emaila weryfikacyjnego
-    sendVerificationEmail(email, verificationToken)
-
-    await newUser.save()
-    res.status(201).json({
-        user: { email, subscription: 'starter' },
-    })
 })
 
 router.post('/login', async (req, res, next) => {
@@ -179,6 +183,40 @@ router.get('/verify/:verificationToken', async (req, res, next) => {
         res.status(200).json({ message: 'Verification successful' })
     } catch (error) {
         next(error)
+    }
+})
+router.post('/verify', async (req, res, next) => {
+    try {
+        const { email } = req.body
+
+        // Jeśli brak emaila w żądaniu
+        if (!email) {
+            return res
+                .status(400)
+                .json({ message: 'missing required field email' })
+        }
+
+        const user = await User.findOne({ email })
+
+        // Jeśli brak użytkownika o podanym emailu
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' })
+        }
+
+        // Jeśli użytkownik został już zweryfikowany
+        if (user.verify) {
+            return res
+                .status(400)
+                .json({ message: 'Verification has already been passed' })
+        }
+
+        // Wysyłanie emaila weryfikacyjnego
+        sendVerificationEmail(email, user.verificationToken)
+
+        res.status(200).json({ message: 'Verification email sent' })
+    } catch (error) {
+        console.error('Error during re-sending verification email:', error)
+        res.status(500).json({ message: 'Internal server error' })
     }
 })
 
