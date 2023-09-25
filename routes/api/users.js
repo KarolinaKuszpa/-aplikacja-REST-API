@@ -74,6 +74,10 @@ router.post('/login', async (req, res, next) => {
     if (!user) {
         return res.status(400).json({ message: 'Invalid email or password' })
     }
+    // Sprawdzenie, czy konto zostało zweryfikowane
+    if (!user.verify) {
+        return res.status(401).json({ message: 'Account not verified' })
+    }
 
     const isPasswordValid = await bcrypt.compare(password, user.password)
 
